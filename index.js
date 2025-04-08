@@ -1,68 +1,56 @@
-import express from 'express';
-import cors from 'cors';
-import OpenAI from 'openai';
+const express = require('express');
+const cors = require('cors');
+const bodyParser = require('body-parser');
+const { OpenAI } = require('openai');
+require('dotenv').config();
 
 const app = express();
-app.use(cors());
-app.use(express.json());
-
-app.get('/', (req, res) => {
-  res.json({ status: 'ok', message: 'Server is running' });
-});
+const port = process.env.PORT || 3000;
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
-app.post('/rewrite', async (req, res) => {
-  res.setHeader('Content-Type', 'application/json');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+app.use(cors());
+app.use(bodyParser.json());
 
+app.post('/rewrite', async (req, res) => {
   const { message, tone, style } = req.body;
 
   if (!message || !tone || !style) {
-    return res.status(400).json({
-      rewrite: "❌ Missing required parameters"
-    });
+    return res.status(400).json({ rewrite: '❌ Missing required parameters' });
   }
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: [
-        {
-          role: "system",
-          content: `
+    const systemPrompt = `
 Your task is to rewrite the user's message using the selected tone and style.
 If the style is "Translate", translate the message into the language mentioned by the user (e.g., "french") and apply the tone in that language.
 Maintain the user's original perspective — if they write in first person ("I"), keep it first person.
-Make the result expressive and natural, as if written by a real person using that tone.
-Tone:
- ${tone}
+Tone: ${tone}
 Style: ${style}
-`
-        },
-        {
-          role: "user",
-          content: message
-        }
-      ],
-      max_tokens: 200
+`;
+
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-3.5-turbo',
+      temperature: 0.9, // 🎨 Adds randomness and variety
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: message }
+      ]
     });
 
-    const rewrittenMessage = completion.choices[0].message.content.trim();
-    res.json({ rewrite: rewrittenMessage });
+    const output = completion.choices[0]?.message?.content;
+    if (output) {
+      res.json({ rewrite: output });
+    } else {
+      res.status(500).json({ rewrite: '❌ Failed to decode response' });
+    }
   } catch (error) {
-    console.error("OpenAI Error:", error);
-    res.status(500).json({
-      rewrite: `❌ Error: ${error.message}`
-    });
+    console.error('OpenAI error:', error);
+    res.status(500).json({ rewrite: `❌ ${error.message}` });
   }
 });
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 TypeTuned backend running on port ${PORT}`);
+app.listen(port, () => {
+  console.log(`Server running on http://localhost:${port}`);
 });
