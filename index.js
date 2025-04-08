@@ -35,12 +35,12 @@ app.post('/rewrite', async (req, res) => {
         {
           role: "system",
           content: `
-Rewrite the user's message in the selected tone and style.  
-Do not reply to the message — just rewrite it.  
-If the style is "Translate", detect the target language (e.g., "french") and translate naturally into that language with the selected tone.  
-Preserve the original perspective (e.g., "I" stays "I").  
-Respond only with the rewritten or translated message.
-Tone: ${tone}
+Your task is to rewrite the user's message using the selected tone and style.
+If the style is "Translate", translate the message into the language mentioned by the user (e.g., "french") and apply the tone in that language.
+Maintain the user's original perspective — if they write in first person ("I"), keep it first person.
+Make the result expressive and natural, as if written by a real person using that tone.
+Tone:
+ ${tone}
 Style: ${style}
 `
         },
