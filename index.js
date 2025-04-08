@@ -22,10 +22,10 @@ app.post('/rewrite', async (req, res) => {
   }
 
   try {
-    const systemPrompt = `
-Your task is to rewrite the user's message using the selected tone and style.
-If the style is "Translate", translate the message into the language mentioned by the user (e.g., "french") and apply the tone in that language.
-Maintain the user's original perspective — if they write in first person ("I"), keep it first person.
+   const systemPrompt = `
+You are not starting a conversation. Rewrite the user's message using the selected tone and style — no greetings, no introductions.
+If the style is "Translate", translate the message into the target language (e.g., "french") and apply the tone in that language.
+Keep the message in the same perspective (first person stays first person, etc).
 Tone: ${tone}
 Style: ${style}
 `;
