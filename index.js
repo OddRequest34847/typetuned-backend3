@@ -32,7 +32,7 @@ Style: ${style}
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
-      temperature: 1.1, // 🎨 Adds randomness and variety
+      temperature: 1.0, // 🎨 Adds randomness and variety
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: message }
