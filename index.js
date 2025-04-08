@@ -1,7 +1,7 @@
-const express = from('express');
-const cors = from('cors');
-const bodyParser = from('body-parser');
-const { OpenAI } = from('openai');
+const express = from ('express');
+const cors = from ('cors');
+const bodyParser = from ('body-parser');
+const { OpenAI } = from ('openai');
 dotenv.config();
 
 const app = express();
