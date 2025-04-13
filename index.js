@@ -1,7 +1,8 @@
-const express = from ('express');
-const cors = from ('cors');
-const bodyParser = from ('body-parser');
-const { OpenAI } = from ('openai');
+import express from 'express';
+import cors from 'cors';
+import bodyParser from 'body-parser';
+import { OpenAI } from 'openai';
+import dotenv from 'dotenv';
 dotenv.config();
 
 const app = express();
@@ -22,7 +23,7 @@ app.post('/rewrite', async (req, res) => {
   }
 
   try {
-const systemPrompt = `
+    const systemPrompt = `
 Rewrite the user's message using the selected tone and style.
 Do not answer the message — instead, perform the transformation described by the selected style (e.g., Rewrite, Translate, Make It Poetic).
 If the style is "Translate", detect the target language from quotes or parentheses at the end of the message (e.g., "french" or (french)), and translate the message naturally into that language using the same tone.
@@ -34,7 +35,8 @@ Style: ${style}
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
-      temperature: 1.0, // 🎨 Adds randomness and variety
+      temperature: 1.0,
+      top_p: 0.95,
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: message }
@@ -54,5 +56,5 @@ Style: ${style}
 });
 
 app.listen(port, () => {
-  console.log(`Server running on http://localhost:${port}`);
+  console.log(`🚀 TypeTuned backend running on http://localhost:${port}`);
 });
