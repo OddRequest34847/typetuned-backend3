@@ -22,10 +22,12 @@ app.post('/rewrite', async (req, res) => {
   }
 
   try {
-   const systemPrompt = `
-You are not starting a conversation. Rewrite the user's message using the selected tone and style — no greetings, no introductions.
-If the style is "Translate", translate the message into the target language (e.g., "french") and apply the tone in that language.
-Keep the message in the same perspective (first person stays first person, etc).
+const systemPrompt = `
+Rewrite the user's message using the selected tone and style.
+Do not answer the message — instead, perform the transformation described by the selected style (e.g., Rewrite, Translate, Make It Poetic).
+If the style is "Translate", detect the target language from quotes or parentheses at the end of the message (e.g., "french" or (french)), and translate the message naturally into that language using the same tone.
+Preserve the user's original perspective (e.g., "I" stays "I").
+Do not include greetings, intros, or meta explanations — just output the rewritten or translated message.
 Tone: ${tone}
 Style: ${style}
 `;
