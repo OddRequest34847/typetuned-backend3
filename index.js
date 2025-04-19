@@ -1,8 +1,9 @@
 import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
-import { OpenAI } from 'openai';
 import dotenv from 'dotenv';
+import { OpenAI } from 'openai';
+
 dotenv.config();
 
 const app = express();
@@ -16,34 +17,38 @@ app.use(cors());
 app.use(bodyParser.json());
 
 app.post('/rewrite', async (req, res) => {
-  const { message, tone, style } = req.body;
+  const { message, tone, style, translateToggle, language } = req.body;
 
   if (!message || !tone || !style) {
     return res.status(400).json({ rewrite: '❌ Missing required parameters' });
   }
 
-  try {
-    const systemPrompt = `
-Rewrite the user's message using the selected tone and style.
-Do not answer the message — instead, perform the transformation described by the selected style (e.g., Rewrite, Translate, Make It Poetic).
-If the style is "Translate", detect the target language from quotes or parentheses at the end of the message (e.g., "french" or (french)), and translate the message naturally into that language using the same tone.
-Preserve the user's original perspective (e.g., "I" stays "I").
-Do not include greetings, intros, or meta explanations — just output the rewritten or translated message.
-Tone: ${tone}
-Style: ${style}
-`;
+  const shouldTranslate = translateToggle === true || style.toLowerCase() === 'translate';
 
+  const prompt = `
+Your task is to rewrite the user's message using the selected tone and style.
+${shouldTranslate
+    ? `Translate the message into "${language}" and apply the tone in that language.`
+    : `Use the selected style "${style}" and apply the tone "${tone}".`
+  }
+
+- Do NOT include greetings or introductions (e.g., "Hey there").
+- Maintain the user's original perspective (first person stays first person, etc).
+- Return only the final rewritten message, with no extra explanation.
+  `;
+
+  try {
     const completion = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
-      temperature: 1.0,
-      top_p: 0.95,
+      temperature: 1.0, // Max allowed value for creative variety
       messages: [
-        { role: 'system', content: systemPrompt },
+        { role: 'system', content: prompt.trim() },
         { role: 'user', content: message }
       ]
     });
 
-    const output = completion.choices[0]?.message?.content;
+    const output = completion.choices[0]?.message?.content?.trim();
+
     if (output) {
       res.json({ rewrite: output });
     } else {
@@ -56,5 +61,5 @@ Style: ${style}
 });
 
 app.listen(port, () => {
-  console.log(`🚀 TypeTuned backend running on http://localhost:${port}`);
+  console.log(`🚀 TypeTuned backend running at http://localhost:${port}`);
 });
