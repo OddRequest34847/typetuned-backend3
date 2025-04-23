@@ -26,19 +26,22 @@ app.post('/rewrite', async (req, res) => {
   const shouldTranslate = translateToggle === true || style.toLowerCase() === 'translate';
 
   const prompt = `
-Your task is to rewrite the user's message using the selected tone and style.
+Rewrite the user's message using the selected tone and style.
+
 ${shouldTranslate
-    ? `Translate the message into "${language}" and apply the tone in that language.`
-    : `Use the selected style "${style}" and apply the tone "${tone}".`}
-- Do NOT include greetings or intros like "Hey there".
-- Keep the user's perspective (e.g., "I" stays "I").
-- Return ONLY the final rewritten or translated message. Do not explain.
-  `;
+    ? `Translate the entire message into "${language}" and apply the tone in that language.`
+    : `Use the selected style "${style}" and apply the tone "${tone}".`
+}
+
+- Maintain the user's original perspective (e.g., first-person stays first-person).
+- Do not include greetings, introductions, or explanations.
+- Return only the rewritten or translated message.
+`;
 
   try {
     const completion = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
-      temperature: 1.0, // Safe max for variety without crashing
+      temperature: 1.0,
       messages: [
         { role: 'system', content: prompt.trim() },
         { role: 'user', content: message }
