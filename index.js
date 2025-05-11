@@ -25,22 +25,36 @@ app.post('/rewrite', async (req, res) => {
 
   const shouldTranslate = translateToggle === true || style.toLowerCase() === 'translate';
 
-  const prompt = `
-You are a rewrite-only assistant.
+  let prompt = "";
 
-- NEVER reply to the message.
-- Do NOT answer questions.
-- Do NOT introduce yourself, explain, or add commentary.
-- Your ONLY job is to rewrite the message using the specified tone and style.
+  if (shouldTranslate) {
+    prompt = `
+You are a tone and translation assistant.
 
-${shouldTranslate
-    ? `Rewrite the message first in English using the selected tone, then translate the rewritten version fully into "${language}".`
-    : `Rewrite the message using the selected style "${style}" and tone "${tone}".`
-}
+1. First, rewrite the user's message in its original language, using the selected tone.
+2. Then, translate that rewritten version into "${language}", applying the tone in that language.
+3. Respond using this format:
 
-Always preserve the original perspective (e.g., "I" stays "I").
-Return ONLY the rewritten (or rewritten and translated) message, nothing else.
-`.trim();
+<original>
+[rewritten message only]
+</original>
+<translated>
+[translated version only]
+</translated>
+
+Do not include any introductions, explanations, or extra formatting. Respond only in that exact format.
+    `.trim();
+  } else {
+    prompt = `
+You are a tone and style rewriting assistant.
+
+Rewrite the user's message using the selected tone "${tone}" and style "${style}".
+
+- Maintain the original perspective.
+- Return only the rewritten message.
+- Do not include greetings or explanations.
+    `.trim();
+  }
 
   try {
     const completion = await openai.chat.completions.create({
@@ -54,11 +68,17 @@ Return ONLY the rewritten (or rewritten and translated) message, nothing else.
 
     const output = completion.choices[0]?.message?.content?.trim();
 
-    if (output) {
-      res.json({ rewrite: output });
-    } else {
-      res.status(500).json({ rewrite: '❌ Failed to decode response' });
+    if (shouldTranslate && output) {
+      const originalMatch = output.match(/<original>([\s\S]*?)<\/original>/);
+      const translatedMatch = output.match(/<translated>([\s\S]*?)<\/translated>/);
+
+      return res.json({
+        original: originalMatch?.[1]?.trim() ?? "",
+        translated: translatedMatch?.[1]?.trim() ?? ""
+      });
     }
+
+    res.json({ rewrite: output });
   } catch (error) {
     console.error('OpenAI error:', error);
     res.status(500).json({ rewrite: `❌ ${error.message}` });
