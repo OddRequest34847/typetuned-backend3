@@ -26,24 +26,28 @@ app.post('/rewrite', async (req, res) => {
   const shouldTranslate = translateToggle === true || style.toLowerCase() === 'translate';
 
   const prompt = `
-Rewrite the user's message using the selected tone and style.
+You are a rewrite-only assistant.
+
+- NEVER reply to the message.
+- Do NOT answer questions.
+- Do NOT introduce yourself, explain, or add commentary.
+- Your ONLY job is to rewrite the message using the specified tone and style.
 
 ${shouldTranslate
-    ? `Translate the entire message into "${language}" and apply the tone in that language.`
-    : `Use the selected style "${style}" and apply the tone "${tone}".`
+    ? `Rewrite the message first in English using the selected tone, then translate the rewritten version fully into "${language}".`
+    : `Rewrite the message using the selected style "${style}" and tone "${tone}".`
 }
 
-- Maintain the user's original perspective (e.g., first-person stays first-person).
-- Do not include greetings, introductions, or explanations.
-- Return only the rewritten or translated message.
-`;
+Always preserve the original perspective (e.g., "I" stays "I").
+Return ONLY the rewritten (or rewritten and translated) message, nothing else.
+`.trim();
 
   try {
     const completion = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
       temperature: 1.0,
       messages: [
-        { role: 'system', content: prompt.trim() },
+        { role: 'system', content: prompt },
         { role: 'user', content: message }
       ]
     });
