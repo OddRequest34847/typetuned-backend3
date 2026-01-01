@@ -85,6 +85,34 @@ Rewrite the user's message using the selected tone "${tone}" and style "${style}
   }
 });
 
+app.post('/imagine', async (req, res) => {
+  const { prompt } = req.body;
+
+  if (!prompt || !prompt.trim()) {
+    return res.status(400).json({ error: '❌ Missing prompt' });
+  }
+
+  try {
+    const response = await openai.images.generate({
+      model: 'gpt-image-1',
+      prompt: prompt.trim(),
+      size: '1024x1024',
+      response_format: 'b64_json',
+    });
+
+    const imageBase64 = response.data?.[0]?.b64_json;
+    if (!imageBase64) {
+      return res.status(500).json({ error: '❌ Failed to generate image' });
+    }
+
+    res.json({ image: imageBase64 });
+  } catch (error) {
+    console.error('OpenAI image error:', error);
+    res.status(500).json({ error: `❌ ${error.message}` });
+  }
+});
+
 app.listen(port, () => {
   console.log(`🚀 TypeTuned backend running at http://localhost:${port}`);
 });
+
