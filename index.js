@@ -25,43 +25,33 @@ app.post('/rewrite', async (req, res) => {
 
   const shouldTranslate = translateToggle === true || style.toLowerCase() === 'translate';
 
-  let prompt = "";
-
-  if (shouldTranslate) {
-    prompt = `
+  const translatePrompt = `
 You are a tone and translation assistant.
 
-1. First, rewrite the user's message in its original language, using the selected tone.
-2. Then, translate that rewritten version into "${language}", applying the tone in that language.
-3. Respond using this format:
+Return a JSON object with keys:
+- "rewrite": the full rewritten message in the original language, using the selected tone.
+- "translated": the full translation of that rewritten message into "${language}" with the same tone.
 
-<original>
-[rewritten message only]
-</original>
-<translated>
-[translated version only]
-</translated>
+Do not skip sentences or summarize. Respond with JSON only.`.trim();
 
-Do not include any introductions, explanations, or extra formatting. Respond only in that exact format.
-    `.trim();
-  } else {
-    prompt = `
+  const rewritePrompt = `
 You are a tone and style rewriting assistant.
 
 Rewrite the user's message using the selected tone "${tone}" and style "${style}".
 
 - Maintain the original perspective.
 - Return only the rewritten message.
-- Do not include greetings or explanations.
-    `.trim();
-  }
+- Do not include greetings or explanations.`.trim();
 
   try {
     const completion = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
-      temperature: 1.0,
+      temperature: shouldTranslate ? 0.4 : 1.0,
+      presence_penalty: shouldTranslate ? 0.0 : 0.6,
+      frequency_penalty: shouldTranslate ? 0.0 : 0.3,
+      ...(shouldTranslate ? { response_format: { type: 'json_object' } } : {}),
       messages: [
-        { role: 'system', content: prompt },
+        { role: 'system', content: shouldTranslate ? translatePrompt : rewritePrompt },
         { role: 'user', content: message }
       ]
     });
@@ -69,13 +59,20 @@ Rewrite the user's message using the selected tone "${tone}" and style "${style}
     const output = completion.choices[0]?.message?.content?.trim();
 
     if (shouldTranslate && output) {
-      const originalMatch = output.match(/<original>([\s\S]*?)<\/original>/);
-      const translatedMatch = output.match(/<translated>([\s\S]*?)<\/translated>/);
-
-      return res.json({
-        original: originalMatch?.[1]?.trim() ?? "",
-        translated: translatedMatch?.[1]?.trim() ?? ""
-      });
+      try {
+        const parsed = JSON.parse(output);
+        const rewrite = (parsed.rewrite ?? parsed.original ?? '').toString().trim();
+        const translated = (parsed.translated ?? parsed.translation ?? '').toString().trim();
+        return res.json({ rewrite, original: rewrite, translated });
+      } catch {
+        const originalMatch = output.match(/<original>([\s\S]*?)<\/original>/);
+        const translatedMatch = output.match(/<translated>([\s\S]*?)<\/translated>/);
+        return res.json({
+          rewrite: originalMatch?.[1]?.trim() ?? '',
+          original: originalMatch?.[1]?.trim() ?? '',
+          translated: translatedMatch?.[1]?.trim() ?? ''
+        });
+      }
     }
 
     res.json({ rewrite: output });
@@ -115,4 +112,3 @@ app.post('/imagine', async (req, res) => {
 app.listen(port, () => {
   console.log(`🚀 TypeTuned backend running at http://localhost:${port}`);
 });
-
